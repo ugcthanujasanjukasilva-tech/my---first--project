@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Profile Finder</title>
+    <style>
+        /* --- CSS (Interface එක ලස්සන කරන්න) --- */
+        body {
+            background-color: #0d1117; /* GitHub Dark Theme එක */
+            color: #c9d1d9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+            background: #161b22;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #f0f6fc;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: white;
+            border-radius: 6px;
+            outline: none;
+            font-size: 16px;
+        }
+
+        .search-box input:focus {
+            border-color: #58a6ff;
+        }
+
+        .search-box button {
+            padding: 12px 20px;
+            background: #238636;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .search-box button:hover {
+            background: #2ea44f;
+        }
+
+        .profile-card {
+            background: #21262d;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #30363d;
+            margin-bottom: 15px;
+        }
+
+        .name {
+            color: #f0f6fc;
+            margin: 0 0 5px 0;
+            font-size: 22px;
+        }
+
+        .bio {
+            font-size: 14px;
+            color: #8b949e;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: #161b22;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .repo-list {
+            text-align: left;
+        }
+
+        .repo-item {
+            background: #161b22;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+        }
+
+        .repo-item a {
+            color: #58a6ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .repo-item a:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>GitHub Profile Finder</h1>
+        <div class="search-box">
+            <input type="text" id="username" placeholder="Enter GitHub Username...">
+            <button onclick="getProfile()">Search</button>
+        </div>
+        
+        <!-- Data පෙන්වන Card එක (මුලින්ම හංගලා තියෙන්නේ) -->
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        /* --- JavaScript (API එකෙන් Data ගන්න කෑල්ල) --- */
+        async function getProfile() {
+            const username = document.getElementById('username').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!username) {
+                alert('මචන්, කලින් Username එකක් ඇතුලත් කරලා ඉන්න!');
+                return;
+            }
+
+            try {
+                // User ගේ මූලික විස්තර ගන්නවා
+                const userResponse = await fetch(`https://api.github.com/users/${username}`);
+                
+                if (userResponse.status === 404) {
+                    resultDiv.innerHTML = `<p style="color: #f85149; font-weight: bold;">User කෙනෙක් හමු වුණේ නැහැ! ❌</p>`;
+                    resultDiv.style.display = 'block';
+                    return;
+                }
+
+                const userData = await userResponse.json();
+
+                // User ගේ අලුත්ම Public Repositories 5ක් ගන්නවා
+                const repoResponse = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=5`);
+                const repos = await repoResponse.json();
+
+                // HTML එක dynamic ව හදලා UI එකට දානවා
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <div class="profile-card">
+                        <img class="avatar" src="${userData.avatar_url}" alt="Avatar">
+                        <h2 class="name">${userData.name || username}</h2>
+                        <p class="bio">${userData.bio || 'No bio available'}</p>
+                        
+                        <div class="stats">
+                            <div><strong>${userData.followers}</strong> <br> Followers</div>
+                            <div><strong>${userData.following}</strong> <br> Following</div>
+                            <div><strong>${userData.public_repos}</strong> <br> Repos</div>
+                        </div>
+
+                        <h3 style="text-align: left; color: #f0f6fc; font-size: 16px;">Latest Repositories:</h3>
+                        <div class="repo-list">
+                            ${repos.map(repo => `
+                                <div class="repo-item">
+                                    <a href="${repo.html_url}" target="_blank">${repo.name}</a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error("Error:", error);
+                resultDiv.innerHTML = `<p style="color: #f85149;">Network Error එකක්! පස්සේ උත්සාහ කරන්න.</p>`;
+                resultDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
